@@ -1,0 +1,190 @@
+This is the source code for the game in Python:
+
+import pygame
+import random
+
+pygame.init()
+
+width, height = 600, 400
+win = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Snake Game")
+
+red = (255, 0, 0)
+dark_green = (0, 100, 0)
+blue = (0, 0, 255)
+white = (255, 255, 255)
+yellow = (255, 255, 0)
+cyan = (0, 255, 255)
+purple = (128, 0, 128)
+orange = (255, 165, 0)
+colors = [white, blue, yellow, cyan, purple, orange, red]
+
+clock = pygame.time.Clock()
+snake_block = 10
+
+font_style = pygame.font.SysFont(None, 35)
+
+def message(msg, color, pos=None):
+    mesg = font_style.render(msg, True, color)
+    if pos:
+        win.blit(mesg, pos)
+    else:
+        win.blit(mesg, [width / 6, height / 3])
+
+def show_score(score, high_score):
+    value = font_style.render("Score: " + str(score), True, red)
+    win.blit(value, [10, 10])
+    hs = font_style.render("High Score: " + str(high_score), True, red)
+    win.blit(hs, [10, 40])
+
+def show_speed(speed):
+    value = font_style.render("Speed: " + str(round(speed,1)), True, red)
+    text_width = value.get_width()
+    win.blit(value, [width - text_width - 10, 10])
+
+def select_difficulty():
+    selecting = True
+    difficulty = None
+    while selecting:
+        win.fill(dark_green)
+        message("Select Difficulty:", red, [width/3, height/4])
+        message("1 - Easy", red, [width/3, height/4+50])
+        message("2 - Medium", red, [width/3, height/4+100])
+        message("3 - Hard", red, [width/3, height/4+150])
+        pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_1:
+                    difficulty = 'easy'
+                    selecting = False
+                elif event.key == pygame.K_2:
+                    difficulty = 'medium'
+                    selecting = False
+                elif event.key == pygame.K_3:
+                    difficulty = 'hard'
+                    selecting = False
+    return difficulty
+
+high_scores = {'easy':0, 'medium':0, 'hard':0}
+
+def gameLoop():
+    global high_scores
+    difficulty = select_difficulty()
+
+    if difficulty == 'easy':
+        current_speed = 5
+        speed_increase = 1
+        max_speed = 30
+    elif difficulty == 'medium':
+        current_speed = 10
+        speed_increase = 5
+        max_speed = 50
+    elif difficulty == 'hard':
+        current_speed = 20
+        speed_increase = 15
+        max_speed = 95
+
+    game_over = False
+    game_close = False
+
+    x1 = width / 2
+    y1 = height / 2
+    x1_change = 0
+    y1_change = 0
+
+    snake_list = []
+    length_of_snake = 1
+    score = 0
+    snake_color = random.choice(colors)
+
+    foodx = round(random.randrange(0, width - snake_block) / 10.0) * 10.0
+    foody = round(random.randrange(0, height - snake_block) / 10.0) * 10.0
+
+    max_speed_reached = False
+
+    while not game_over:
+
+        while game_close:
+            win.fill(dark_green)
+            message("You Lost! Press Q-Quit or C-Play Again", red)
+            pygame.display.update()
+
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_q:
+                        game_over = True
+                        game_close = False
+                    if event.key == pygame.K_c:
+                        gameLoop()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game_over = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT and x1_change == 0:
+                    x1_change = -snake_block
+                    y1_change = 0
+                elif event.key == pygame.K_RIGHT and x1_change == 0:
+                    x1_change = snake_block
+                    y1_change = 0
+                elif event.key == pygame.K_UP and y1_change == 0:
+                    y1_change = -snake_block
+                    x1_change = 0
+                elif event.key == pygame.K_DOWN and y1_change == 0:
+                    y1_change = snake_block
+                    x1_change = 0
+
+        if x1 >= width or x1 < 0 or y1 >= height or y1 < 0:
+            game_close = True
+
+        x1 += x1_change
+        y1 += y1_change
+        win.fill(dark_green)
+        pygame.draw.rect(win, blue, [foodx, foody, snake_block, snake_block])
+
+        snake_head = [x1, y1]
+        snake_list.append(snake_head)
+        if len(snake_list) > length_of_snake:
+            del snake_list[0]
+
+        for segment in snake_list[:-1]:
+            if segment == snake_head:
+                game_close = True
+
+        for segment in snake_list:
+            pygame.draw.rect(win, snake_color, [segment[0], segment[1], snake_block, snake_block])
+
+        if score > high_scores[difficulty]:
+            high_scores[difficulty] = score
+
+        show_score(score, high_scores[difficulty])
+        show_speed(current_speed)
+
+        pygame.display.update()
+
+        if x1 == foodx and y1 == foody:
+            foodx = round(random.randrange(0, width - snake_block) / 10.0) * 10.0
+            foody = round(random.randrange(0, height - snake_block) / 10.0) * 10.0
+            length_of_snake += 1
+            score += 1
+
+            if current_speed < max_speed:
+                current_speed += speed_increase
+            else:
+                current_speed = max_speed
+                max_speed_reached = True
+
+            snake_color = random.choice(colors)
+
+        if max_speed_reached:
+            message("Max!", red, [width/2 - 20, 10])
+
+        clock.tick(current_speed)
+
+    pygame.quit()
+    quit()
+
+gameLoop()
